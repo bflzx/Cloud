@@ -5,15 +5,17 @@
 #include <mutex>
 #include <condition_variable>
 #include <memory>
+#include <atomic>
 #include "Mysql.hpp"
 #include "Log.hpp"
 #include "SingletonBase.hpp"
 
-const int default_capacity = 4;
 
 class MysqlPool : public SingletonBase<MysqlPool>
 {
     friend class SingletonBase<MysqlPool>;
+    static const int default_capacity = 4;
+
 public:
     std::unique_ptr<Mysql> borrow()
     {
@@ -28,21 +30,6 @@ public:
         lock.unlock();
 
         if(conn->ping() || conn->reconnect()) return conn;
-        
-        for(int retry = 0;retry < pool_capacity_;retry++)
-        {
-            lock.lock();
-            while(!stopped_ && pool_.empty())
-            {
-                cv_.wait(lock);
-            }
-            if(stopped_ && pool_.empty()) return nullptr;
-            std::unique_ptr<Mysql> newconn = std::move(pool_.front());
-            pool_.pop();
-            lock.unlock();
-
-            if(newconn->ping() || newconn->reconnect()) return newconn;
-        }
         return nullptr;
     }
 
@@ -62,14 +49,14 @@ public:
 
 public:
     void start(const std::string& host,const std::string& username,
-        const std::string& password,const int port,const std::string& database,const int capcity)
+        const std::string& password,const int port,const std::string& database,const int capacity = default_capacity)
     {
         host_ = host;
         username_ = username;
         password_ =password;
         port_ = port;
         database_ = database;
-        pool_capacity_ = capcity;
+        pool_capacity_ = capacity;
         
         {
             std::lock_guard<std::mutex> lock(mutex_);
@@ -78,9 +65,9 @@ public:
                 LOG_WARN("MysqlPool has started_!");
                 return;
             }
+            started_ = true;
         }
-        started_ = true;
-        for (int i = 0; i < capcity; ++i)
+        for (int i = 0; i < capacity; ++i)
         {
             std::unique_ptr<Mysql> conn = std::make_unique<Mysql>(host_,username_,password_,port_,database_);
             if(conn->get_mysql())
@@ -127,6 +114,6 @@ private:
     std::queue<std::unique_ptr<Mysql>> pool_;
     std::mutex mutex_;
     std::condition_variable cv_;
-    bool stopped_ = false;
-    bool started_ = false;
+    std::atomic<bool> stopped_ = false;
+    std::atomic<bool> started_ = false;
 };

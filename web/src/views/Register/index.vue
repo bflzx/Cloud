@@ -1,27 +1,24 @@
 <script setup>
     import { reactive } from 'vue';
-    import request from '../../util/request'
     import { useRouter } from 'vue-router'
+    import request from '../../util/request'
     const router = useRouter();
     const user = reactive({
         username:'',
         password:''
     })
 
-    const onLogin = async () =>{
+    const onRegister = async () =>{
         try{
-            const res = await request.post('/login',{
+            const res = await request.post('/register',{
                 username: user.username,
-                password: user.password
-            })
-
-            localStorage.setItem('token',res.data.token)
+                password: user.password    
+            }
+            )
+            router.push('/login');
         } catch(err){
             console.log(err.message);
         }
-    }
-    const onRegister = () =>{
-        router.push('/register');
     }
 </script>
 
@@ -29,7 +26,7 @@
     <div id="screen">
         <div class="login">
             <div class="login-header">
-                <h1 class="logintitle">登录</h1>
+                <h1 class="logintitle">注册</h1>
             </div>
 
             <div class="login-form">
@@ -43,7 +40,6 @@
                     </el-form-item>
 
                     <el-form-item class="submit-form">
-                        <el-button class="submit-button" type="primary" @click="onLogin">登录</el-button>
                         <el-button class="register-button" type="warning" @click="onRegister">注册</el-button>
                     </el-form-item>
                 </el-form>

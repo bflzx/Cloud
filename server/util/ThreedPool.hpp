@@ -10,17 +10,17 @@
 #include "SingletonBase.hpp"
 #include "Log.hpp"
 
-const int default_capacity = 4;
 
 using func = std::function<void()>;
 
 class ThreadPool : public SingletonBase<ThreadPool>
 {
     friend class SingletonBase<ThreadPool>;
+    static const int default_capacity = 4;
+
 public:
     void push(const func& f)
     {
-        {
             std::lock_guard<std::mutex> lock(mutex_);
             if(stopped_)
             {
@@ -29,7 +29,6 @@ public:
             }
             task_queue_.push(f);
             cv_.notify_one();
-        }
     }
 
     void start(int thread_num)
@@ -51,7 +50,7 @@ public:
         pool_capacity_ = thread_num;
         for(int i = 0; i < thread_num; i++)
         {
-            std::thread t(std::bind(threadTask,this));
+            std::thread t(std::bind(&ThreadPool::threadTask,this));
             thread_pool_.push_back(std::move(t));
         }
     }

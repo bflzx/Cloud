@@ -57,7 +57,10 @@ public:
     Mysql(const std::string& host,const std::string& username,const std::string& password,const int port,const std::string& database)
     :host_(host),username_(username),password_(password),port_(port),database_(database)
     {
-        if(!connect()) return;
+        if(!connect())
+        {
+            mysql_ = nullptr;
+        }
     }
 
     ~Mysql()
@@ -88,7 +91,7 @@ private:
             mysql_ = nullptr;
             return false;
         }
-        if(!mysql_set_character_set(mysql_,"utf8mb4"))
+        if(mysql_set_character_set(mysql_,"utf8mb4"))
         {
             mysql_close(mysql_);
             mysql_ = nullptr;
@@ -103,5 +106,5 @@ private:
     std::string password_;
     std::string database_;
     int port_;
-    MYSQL* mysql_;
+    MYSQL* mysql_ = nullptr;
 };

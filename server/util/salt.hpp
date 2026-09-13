@@ -1,0 +1,75 @@
+#pragma once
+#include <string>
+#include <iomanip>
+#include <sstream>
+#include <cstdlib>
+#include <vector>
+#include <openssl/rand.h>
+#include <openssl/evp.h>
+#include "Log.hpp"
+
+std::string getSalt()
+{
+    const int salt_byte_len = 32;
+    unsigned char raw_salt[salt_byte_len] = {0};
+
+    int ret = RAND_bytes(raw_salt,salt_byte_len);
+    if(ret != 1)
+    {
+        LOG_ERROR("RAND_bytes failed, cannot generate salt");
+        return "";
+    }
+
+    std::ostringstream oss;
+    oss << std::hex << std::setfill('0');
+    for(int i = 0;i < salt_byte_len;i++)
+    {
+        oss << std::setw(2) << int(raw_salt[i]);
+    }
+
+    return oss.str();
+}
+
+static std::vector<unsigned char> hex_to_bin(const std::string& hex)
+{
+    std::vector<unsigned char> bin;
+    for (size_t i = 0; i + 1 < hex.size(); i += 2)
+    {
+        std::string sub = hex.substr(i, 2);
+        uint8_t val = static_cast<uint8_t>(strtol(sub.c_str(), nullptr, 16));
+        bin.push_back(val);
+    }
+    return bin;
+}
+
+std::string pbkdf2_hash(const std::string& raw_pwd, const std::string& hex_salt, int iter = 100000)
+{
+    std::vector<unsigned char> salt_bin = hex_to_bin(hex_salt);
+    const int hash_byte_len = 32;
+    unsigned char hash_out[hash_byte_len] = {0};
+
+    int rc = PKCS5_PBKDF2_HMAC(
+        raw_pwd.data(),
+        static_cast<int>(raw_pwd.size()),
+        salt_bin.data(),
+        static_cast<int>(salt_bin.size()),
+        iter,
+        EVP_sha256(),
+        hash_byte_len,
+        hash_out
+    );
+
+    if (rc != 1)
+    {
+        LOG_ERROR("PKCS5_PBKDF2_HMAC compute failed");
+        return "";
+    }
+
+    std::ostringstream oss;
+    oss << std::hex << std::setfill('0');
+    for (int i = 0; i < hash_byte_len; ++i)
+    {
+        oss << std::setw(2) << static_cast<int>(hash_out[i]);
+    }
+    return oss.str();
+}
