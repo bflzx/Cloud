@@ -6,7 +6,7 @@
 #include <vector>
 #include <openssl/rand.h>
 #include <openssl/evp.h>
-#include "Log.hpp"
+#include "Exception.hpp"
 
 std::string getSalt()
 {
@@ -16,7 +16,7 @@ std::string getSalt()
     int ret = RAND_bytes(raw_salt,salt_byte_len);
     if(ret != 1)
     {
-        LOG_ERROR("RAND_bytes failed, cannot generate salt");
+        THROW_EXC(SaltException,1,"RAND_bytes failed, generate random salt error");
         return "";
     }
 
@@ -61,7 +61,7 @@ std::string pbkdf2_hash(const std::string& raw_pwd, const std::string& hex_salt,
 
     if (rc != 1)
     {
-        LOG_ERROR("PKCS5_PBKDF2_HMAC compute failed");
+        THROW_EXC(SaltException,1,"PKCS5_PBKDF2_HMAC compute failed");
         return "";
     }
 

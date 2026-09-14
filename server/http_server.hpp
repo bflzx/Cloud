@@ -48,65 +48,51 @@ private:
     }
     awaitable<void> router_handle(http::request<http::string_body>& req,http::response<http::string_body>& res)
     {
-
-        
-
         res.result(http::status::ok);
 
         std::string target = req.target();
         std::string body;
         std::string mime = get_mime(target);
-
-        //TODO options请求解决
-        res.set(http::field::access_control_allow_origin, "*");
-        res.set(http::field::access_control_allow_methods, "GET,POST,OPTIONS");
-        res.set(http::field::access_control_allow_headers, "Content-Type,Authorization");
-
-        if(req.method() == http::verb::options)
-        {
-            res.result(http::status::no_content);
-            body.clear();
-            res.body() = "";
-            co_return;
-        }
-
-        if(target.starts_with("/assets/") || target == "/favicon.svg" || target == "/icons.svg")
-        {
-            body = read_file("../web/dist" + target);
-        }
-        else if(target == "/api/login")
-        {
-            
-        }
-        else if(target == "/api/register")
-        {
-            std::string req_body = req.body();
-            Json::Value user = json::unserialize(req_body);
-            Json::Value resp;
-            std::string salt = getSalt();
-            if(salt.empty())
+        Json::Value resp;
+        try{
+            if(target.starts_with("/assets/") || target == "/favicon.svg" || target == "/icons.svg")
             {
-                resp["code"] = 1000;
-                resp["data"] = Json::Value();
-                resp["message"] = "注册失败";
+                body = read_file("../web/dist" + target);
             }
-            else if(!user.empty() && user.isMember("username") && user.isMember("password"))
+            else if(target == "/api/login")
             {
-                std::string username = user["username"].asString();
-                std::string password = user["password"].asString();
-                std::string hash_password = pbkdf2_hash(password,salt);
-                //用户插入
-                auto conn = MysqlPool::getInstance().borrow();
+                
+            }
+            else if(target == "/api/register")
+            {
+                std::string req_body = req.body();
+                Json::Value user = json::unserialize(req_body);
+                std::string salt = getSalt();
 
-                std::string sql = "INSERT INTO `user` (username, password, salt) "
-                  "VALUES ('" + username + "','" + hash_password + "','" + salt + "')";
-                bool ret = conn->exec(sql);
-                MysqlPool::getInstance().give_back(std::move(conn));
-                if(ret)
+                if(!user.empty() && user.isMember("username") && user.isMember("password"))
                 {
-                    resp["code"] = 0;
-                    resp["data"] = Json::Value();
-                    resp["message"] = "注册成功";
+                    std::string username = user["username"].asString();
+                    std::string password = user["password"].asString();
+                    std::string hash_password = pbkdf2_hash(password,salt);
+                    //用户插入
+                    auto conn = MysqlPool::getInstance().borrow();
+
+                    std::string sql = "INSERT INTO `user` (username, password, salt) "
+                    "VALUES ('" + username + "','" + hash_password + "','" + salt + "')";
+                    bool ret = conn->exec(sql);
+                    MysqlPool::getInstance().give_back(std::move(conn));
+                    if(ret)
+                    {
+                        resp["code"] = 0;
+                        resp["data"] = Json::Value();
+                        resp["message"] = "注册成功";
+                    }
+                    else
+                    {
+                        resp["code"] = 1000;
+                        resp["data"] = Json::Value();
+                        resp["message"] = "注册失败";
+                    }
                 }
                 else
                 {
@@ -114,19 +100,29 @@ private:
                     resp["data"] = Json::Value();
                     resp["message"] = "注册失败";
                 }
+                body = json::serialize(resp);
             }
             else
             {
-                resp["code"] = 1000;
-                resp["data"] = Json::Value();
-                resp["message"] = "注册失败";
+                body = read_file("../web/dist/index.html");
+                mime = "text/html;charset=utf-8";
             }
+        }
+        catch(SaltException& e)
+        {
+            LOG_WARN_EXC(e);
+            resp["code"] = 1000;
+            resp["data"] = Json::Value();
+            resp["message"] = "注册失败";
             body = json::serialize(resp);
         }
-        else
+        catch(const BaseException& e)
         {
-            body = read_file("../web/dist/index.html");
-            mime = get_mime(target);
+            LOG_ERROR_EXC(e);
+            resp["code"] = 5000;
+            resp["data"] = Json::Value();
+            resp["message"] = "服务器内部错误";
+            body = json::serialize(resp);
         }
         res.set(http::field::content_type,mime);
         res.body() = std::move(body);
@@ -144,7 +140,10 @@ private:
         {
             http::request<http::string_body> req;
             co_await http::async_read(stream,buff,req,asio::redirect_error(use_awaitable,ec));
-            
+            if(ec)
+            {
+                break;
+            }
             // std::cout << req.target() << req.body() << req.method() <<std::endl;
             http::response<http::string_body> res;
             co_await router_handle(req,res);
@@ -156,7 +155,10 @@ private:
 
 
             co_await http::async_write(stream,res,asio::redirect_error(use_awaitable,ec));
-
+            if(ec)
+            {
+                break;
+            }
             buff.clear();
         }
     }

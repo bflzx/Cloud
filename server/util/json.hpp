@@ -4,7 +4,7 @@
 #include <memory>
 #include <fstream>
 #include "Log.hpp"
-
+#include "Exception.hpp"
 
 namespace json
 {
@@ -17,7 +17,7 @@ namespace json
         int ret = sw->write(root,&ss);
         if(ret != 0)
         {
-            LOG_WARN("Serialize failed!");
+            LOG_WARN("Serialize Failed!");
             return {};
         }
         

@@ -13,13 +13,28 @@
 #include <atomic>
 #include "SingletonBase.hpp"
 
-#define LOG(lv, msg) Logger::getInstance().log(lv, msg, __FILE__, __LINE__)
+//normal
+#define LOG(lv, msg) \
+    do{\
+        Logger::getInstance().log(lv, msg, __FILE__, __LINE__); \
+    }while(0)
 
 #define LOG_DEBUG(msg) LOG(DEBUG, msg)
 #define LOG_INFO(msg)  LOG(INFO,  msg)
 #define LOG_WARN(msg)  LOG(WARN,  msg)
 #define LOG_ERROR(msg) LOG(ERROR, msg)
 #define LOG_FATAL(msg) LOG(FATAL, msg)
+
+//Exception
+#define LOG_EXC(lv,Exception) \
+    do{\
+         Logger::getInstance().log(lv, (Exception).what(), (Exception).getFile(), (Exception).getLine()); \
+    }while(0)
+#define LOG_DEBUG_EXC(Exception) LOG_EXC(DEBUG, Exception)
+#define LOG_INFO_EXC(Exception)  LOG_EXC(INFO, Exception)
+#define LOG_WARN_EXC(Exception)  LOG_EXC(WARN, Exception)
+#define LOG_ERROR_EXC(Exception) LOG_EXC(ERROR, Exception)
+#define LOG_FATAL_EXC(Exception) LOG_EXC(FATAL, Exception)
 
 enum LogLevel
 {
