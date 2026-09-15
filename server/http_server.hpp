@@ -61,19 +61,65 @@ private:
             }
             else if(target == "/api/login")
             {
+                std::string req_body = req.body();
+                Json::Value user = json::unserialize(req_body);
                 
+                if(!user.empty() && user.isMember("username") && user.isMember("password"))
+                {
+                    std::string username = user["username"].asString();
+                    std::string password = user["password"].asString();
+
+                    
+                    //TODO broow失败抛异常
+                    auto conn = MysqlPool::getInstance().borrow();
+
+                    std::string sql = "SELECT id,username,password,salt FROM user \
+                    WHERE username = '" + username + "'";
+
+                    auto res = conn->get_result();
+                    if(res.size() <= 1)
+                    {
+                        THROW_EXC(BusinessException,4000,"User not found!");
+                    }
+                    int id = std::stoi(res[1][0]);
+                    std::string real_username = res[1][1];
+                    std::string real_password = res[1][2];
+                    std::string salt = res[1][3];
+                    
+                    password = crypto::pbkdf2_hash(password,salt);
+                    if(password == real_password)
+                    {
+                        std::string uid = std::to_string(id);
+                        std::string issuer = "Cloud";
+                        std::string secret = "Lk9sdfj234kL@#$asdfqwer123456";
+                        long expire_sec = 3600;
+
+                        std::string token = crypto::jwt_issue(uid,issuer,secret,expire_sec);
+
+                        resp["code"] = 0;
+                        resp["msg"] = "login success";
+                        resp["data"]["token"] = token;
+                        resp["data"]["uid"] = uid;
+                        body = json::serialize(resp);
+                    }
+                    else
+                    {
+                        THROW_EXC(BusinessException,4001,"Password wrong!");
+                    }
+                    MysqlPool::getInstance().give_back(std::move(conn));
+                }
             }
             else if(target == "/api/register")
             {
                 std::string req_body = req.body();
                 Json::Value user = json::unserialize(req_body);
-                std::string salt = getSalt();
+                std::string salt = crypto::getSalt();
 
                 if(!user.empty() && user.isMember("username") && user.isMember("password"))
                 {
                     std::string username = user["username"].asString();
                     std::string password = user["password"].asString();
-                    std::string hash_password = pbkdf2_hash(password,salt);
+                    std::string hash_password = crypto::pbkdf2_hash(password,salt);
                     //用户插入
                     auto conn = MysqlPool::getInstance().borrow();
 
@@ -124,6 +170,14 @@ private:
             resp["message"] = "服务器内部错误";
             body = json::serialize(resp);
         }
+        catch(...)
+        {
+            LOG_ERROR("unknown uncaught exception");
+            resp["code"] = 500;
+            resp["data"] = Json::Value();
+            resp["message"] = "未知服务异常";
+            body = json::serialize(resp);
+        }
         res.set(http::field::content_type,mime);
         res.body() = std::move(body);
         res.prepare_payload();
@@ -144,7 +198,12 @@ private:
             {
                 break;
             }
-            // std::cout << req.target() << req.body() << req.method() <<std::endl;
+            
+            // std::string method = req.method_string();
+            // std::string url = req.target();
+
+            // tcp::endpoint ep = 
+
             http::response<http::string_body> res;
             co_await router_handle(req,res);
 

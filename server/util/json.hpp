@@ -17,7 +17,7 @@ namespace json
         int ret = sw->write(root,&ss);
         if(ret != 0)
         {
-            LOG_WARN("Serialize Failed!");
+            THROW_EXC(JsonException,2001,"Serialize Failed!");
             return {};
         }
         
@@ -33,7 +33,7 @@ namespace json
         bool ret = cr->parse(str.c_str(),str.c_str() + str.size(),&root,nullptr);
         if(!ret)
         {
-            LOG_WARN("Unserialize failed!");
+            THROW_EXC(JsonException,2002,"Unserialize Failed!");
             return {};
         }
         return root;

@@ -2,6 +2,7 @@
     import { reactive } from 'vue';
     import request from '../../util/request'
     import { useRouter } from 'vue-router'
+    import { ElMessage } from 'element-plus'
     const router = useRouter();
     const user = reactive({
         username:'',
@@ -14,10 +15,18 @@
                 username: user.username,
                 password: user.password
             })
-
             localStorage.setItem('token',res.data.token)
+            ElMessage({
+                message: '登录成功',
+                type: 'success'
+            })
+            router.push('/main')
         } catch(err){
             console.log(err.message);
+            ElMessage({
+                message: '登录失败,请检查账号或密码',
+                type: 'error'
+            })
         }
     }
     const onRegister = () =>{

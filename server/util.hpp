@@ -3,5 +3,5 @@
 #include "util/MysqlPool.hpp"
 #include "util/ThreedPool.hpp"
 #include "util/json.hpp"
-#include "util/salt.hpp"
+#include "util/crypto.hpp"
 #include "util/Exception.hpp"

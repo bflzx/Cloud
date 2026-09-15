@@ -1,7 +1,18 @@
 #pragma once
 #include <exception>
 #include <string>
-#include "util/Log.hpp"
+#include "Log.hpp"
+
+
+/*
+NetworkException:0-999
+DBException:1000-1999
+JsonException:2000-2999
+SaltException:3000-3999
+BusinessException:4000-4999
+*/
+
+
 
 #define THROW_EXC(ExceptionType,errcode,errMsg) \
     throw ExceptionType(errcode,errMsg,__FILE__,__LINE__);

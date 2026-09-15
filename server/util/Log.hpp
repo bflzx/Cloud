@@ -1,5 +1,4 @@
 #pragma once
-
 #include <iostream>
 #include <fstream>
 #include <string>
@@ -12,6 +11,14 @@
 #include <cstring>
 #include <atomic>
 #include "SingletonBase.hpp"
+
+
+/*
+目前加了access_path_成员以及access_open,
+完成了openAccessLog成员
+Next: 完成log_access
+*/
+
 
 //normal
 #define LOG(lv, msg) \
@@ -84,6 +91,8 @@ public:
             std::cout << writeMessage;
         }
     }
+
+    // void log_access()
 private:
     std::string getLocalTimeStr()
     {
@@ -152,6 +161,12 @@ public:
         }
         return ok;
     }
+    void openAccessLog(const std::string& access_path)
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        access_open_ = true;
+        access_path_ = access_path;
+    }
     void closeLocalStorage()
     {
         std::lock_guard<std::mutex> lock(mutex_);
@@ -202,7 +217,6 @@ public:
     {
         return init(DEFAULT_LEVEL);
     }
-    //TODO 可做更多种类初始化init
 private:
     bool setPath_no_lock(const std::string& new_path)
     {
@@ -236,4 +250,7 @@ private:
     std::ofstream out_file_;
     mutable std::mutex mutex_;
     bool io_error_output_ = false;
+
+    std::string access_path_;
+    bool access_open_ = false;
 };

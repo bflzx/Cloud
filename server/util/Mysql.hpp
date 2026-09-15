@@ -26,7 +26,7 @@ public:
         MYSQL_RES* res = mysql_store_result(mysql_);
         if(!res) return {};
         int cols = mysql_num_fields(res);
-        int rows = mysql_num_rows(res) + 1;
+        size_t rows = mysql_num_rows(res) + 1;
         std::vector<std::vector<std::string>> result(rows,std::vector<std::string>(cols));
         
         //1.第一行存储元信息
@@ -36,9 +36,10 @@ public:
             result[0][j] = fields[j].name;
         }
         //2.其余存储查询结构
-        for(int i = 1;i < rows;i++)
+        for(size_t i = 1;i < rows;i++)
         {
             MYSQL_ROW row = mysql_fetch_row(res);
+            if(!row) break;
             for(int j = 0;j < cols;j++)
             {
                 result[i][j] = row[j] ? row[j] : "";
