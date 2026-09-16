@@ -199,10 +199,17 @@ private:
                 break;
             }
             
-            // std::string method = req.method_string();
-            // std::string url = req.target();
+            // [2026-09-16 23:10:22] [127.0.0.1] [51324] [POST] [/api/login] [Mozilla/5.0 (Windows NT 10.0; Win64; x64)]
+            tcp::endpoint client_ep = stream.socket().local_endpoint();
 
-            // tcp::endpoint ep = 
+            std::string client_ip = client_ep.address().to_string();
+            uint16_t client_port = client_ep.port();
+            std::string client_method = req.method_string();
+            std::string client_url = req.target();
+            std::string client_device = req[http::field::user_agent];
+            
+            LOG_ACCESS(client_ip,client_port,client_method,client_url,client_device);
+
 
             http::response<http::string_body> res;
             co_await router_handle(req,res);

@@ -28,9 +28,9 @@
 #define LOG_FATAL(msg) LOG(FATAL, msg)
 
 //Access
-#define LOG_ACCESS(ip,port,method,url,status_code,device) \
+#define LOG_ACCESS(ip,port,method,url,device) \
     do{\
-        Logger::getInstance().log_access(ip,port,method,url,status_code,device); \
+        Logger::getInstance().log_access(ip,port,method,url,device); \
     }while(0)
 
 //Exception
@@ -58,8 +58,8 @@ enum LogLevel
 constexpr const char* LogFormat = "[{}] [{}] [tid:{}] {}:{} : {}\n";
 const LogLevel DEFAULT_LEVEL = INFO;
 
-// [2026-09-16 23:10:22] [127.0.0.1] [51324] [POST] [/api/login] [200] [Mozilla/5.0 (Windows NT 10.0; Win64; x64)]
-constexpr const char* AccessLogFormat = "[{}] [{}] [{}] [{}] [{}] [{}] [{}]\n";
+// [2026-09-16 23:10:22] [127.0.0.1] [51324] [POST] [/api/login] [Mozilla/5.0 (Windows NT 10.0; Win64; x64)]
+constexpr const char* AccessLogFormat = "[{}] [{}] [{}] [{}] [{}] [{}]\n";
 
 class Logger : public SingletonBase<Logger> 
 {
@@ -96,16 +96,16 @@ public:
             std::cout << writeMessage;
         }
     }
-// [2026-09-16 23:10:22] [127.0.0.1] [51324] [POST] [/api/login] [200] [Mozilla/5.0 (Windows NT 10.0; Win64; x64)]
+// [2026-09-16 23:10:22] [127.0.0.1] [51324] [POST] [/api/login] [Mozilla/5.0 (Windows NT 10.0; Win64; x64)]
     void log_access(const std::string& client_ip,uint16_t client_port,const std::string& client_method
-                    ,const std::string& client_url,int status_code,const std::string& device)
+                    ,const std::string& client_url,const std::string& device)
     {
         std::string time = getLocalTimeStr();
         std::lock_guard<std::mutex> lock(mutex_);
 
         std::string writeMessage;
         writeMessage = std::format(AccessLogFormat,time,client_ip,client_port,client_method,client_url
-                                    ,status_code,device);
+                                    ,device);
         if(access_open_ && access_out_file_.is_open())
         {
             access_out_file_ << writeMessage;
