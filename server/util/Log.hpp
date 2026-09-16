@@ -13,11 +13,6 @@
 #include "SingletonBase.hpp"
 
 
-/*
-目前加了access_path_成员以及access_open,
-完成了openAccessLog成员
-Next: 完成log_access
-*/
 
 
 //normal
@@ -32,6 +27,12 @@ Next: 完成log_access
 #define LOG_ERROR(msg) LOG(ERROR, msg)
 #define LOG_FATAL(msg) LOG(FATAL, msg)
 
+//Access
+#define LOG_ACCESS(ip,port,method,url,status_code,device) \
+    do{\
+        Logger::getInstance().log_access(ip,port,method,url,status_code,device); \
+    }while(0)
+
 //Exception
 #define LOG_EXC(lv,Exception) \
     do{\
@@ -42,6 +43,7 @@ Next: 完成log_access
 #define LOG_WARN_EXC(Exception)  LOG_EXC(WARN, Exception)
 #define LOG_ERROR_EXC(Exception) LOG_EXC(ERROR, Exception)
 #define LOG_FATAL_EXC(Exception) LOG_EXC(FATAL, Exception)
+
 
 enum LogLevel
 {
@@ -55,6 +57,9 @@ enum LogLevel
 //[2026‑09‑01 22:10:30.123] [ERROR] [tid:12048] main.cpp:42 : open file failed
 constexpr const char* LogFormat = "[{}] [{}] [tid:{}] {}:{} : {}\n";
 const LogLevel DEFAULT_LEVEL = INFO;
+
+// [2026-09-16 23:10:22] [127.0.0.1] [51324] [POST] [/api/login] [200] [Mozilla/5.0 (Windows NT 10.0; Win64; x64)]
+constexpr const char* AccessLogFormat = "[{}] [{}] [{}] [{}] [{}] [{}] [{}]\n";
 
 class Logger : public SingletonBase<Logger> 
 {
@@ -91,8 +96,38 @@ public:
             std::cout << writeMessage;
         }
     }
+// [2026-09-16 23:10:22] [127.0.0.1] [51324] [POST] [/api/login] [200] [Mozilla/5.0 (Windows NT 10.0; Win64; x64)]
+    void log_access(const std::string& client_ip,uint16_t client_port,const std::string& client_method
+                    ,const std::string& client_url,int status_code,const std::string& device)
+    {
+        std::string time = getLocalTimeStr();
+        std::lock_guard<std::mutex> lock(mutex_);
 
-    // void log_access()
+        std::string writeMessage;
+        writeMessage = std::format(AccessLogFormat,time,client_ip,client_port,client_method,client_url
+                                    ,status_code,device);
+        if(access_open_ && access_out_file_.is_open())
+        {
+            access_out_file_ << writeMessage;
+            if(access_out_file_.fail())
+            {
+                int last_error = errno;
+                if(!access_io_error_output_)
+                {
+                    std::cerr << "Logger file IO error, switch to console output :" 
+                    << std::strerror(last_error) << std::endl; 
+                    access_io_error_output_ = true;
+                }
+                access_out_file_.clear();
+                access_out_file_.close();
+                access_open_ = false;
+            }
+        }
+        else
+        {
+            std::cout << writeMessage;
+        }
+    }
 private:
     std::string getLocalTimeStr()
     {
@@ -161,11 +196,24 @@ public:
         }
         return ok;
     }
-    void openAccessLog(const std::string& access_path)
+    bool openAccessLog(const std::string& access_path)
     {
         std::lock_guard<std::mutex> lock(mutex_);
+
+        if(access_out_file_.is_open())
+        {
+            access_out_file_.close();
+        }
+
+        access_out_file_.open(access_path,std::ios::app);
+        if(!access_out_file_.is_open())
+        {
+            return false;
+        }
+
         access_open_ = true;
         access_path_ = access_path;
+        return true;
     }
     void closeLocalStorage()
     {
@@ -252,5 +300,7 @@ private:
     bool io_error_output_ = false;
 
     std::string access_path_;
+    std::ofstream access_out_file_;
     bool access_open_ = false;
+    bool access_io_error_output_ = false;
 };
