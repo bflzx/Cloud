@@ -19,7 +19,7 @@ namespace crypto{
         int ret = RAND_bytes(raw_salt,salt_byte_len);
         if(ret != 1)
         {
-            THROW_EXC(SaltException,1,"RAND_bytes failed, generate random salt error");
+            THROW_EXC(CryptoException,crypto_err::RAND_BYTES,"RAND_bytes failed, generate random salt error");
             return "";
         }
 
@@ -64,7 +64,7 @@ namespace crypto{
 
         if (rc != 1)
         {
-            THROW_EXC(SaltException,1,"PKCS5_PBKDF2_HMAC compute failed");
+            THROW_EXC(CryptoException,crypto_err::PKCS5_PBKDF2_HMAC,"PKCS5_PBKDF2_HMAC compute failed");
             return "";
         }
 
@@ -102,10 +102,15 @@ namespace crypto{
             verifier.verify(decoded);
             return true;
         }
-        catch (...)
+        catch(const std::exception& e)
         {
-            return false;
+            THROW_EXC(CryptoException,crypto_err::JWT_VERIfY,std::string("jwt_verify error : ") + e.what());
         }
+        catch(...)
+        {
+            THROW_EXC(CryptoException,crypto_err::UNKNOWN,"jwt_verify Unknown Error!")
+        }
+        return false;
     }
 
     std::string jwt_get_sub(const std::string& token)

@@ -154,10 +154,10 @@ private:
                 mime = "text/html;charset=utf-8";
             }
         }
-        catch(SaltException& e)
+        catch(const CryptoException& e)
         {
             LOG_WARN_EXC(e);
-            resp["code"] = 1000;
+            resp["code"] = crypto_err::CRYPTO_ERR;
             resp["data"] = Json::Value();
             resp["message"] = "注册失败";
             body = json::serialize(resp);

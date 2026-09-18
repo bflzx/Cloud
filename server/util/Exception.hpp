@@ -8,10 +8,53 @@
 NetworkException:0-999
 DBException:1000-1999
 JsonException:2000-2999
-SaltException:3000-3999
+CryptoException:3000-3999
 BusinessException:4000-4999
 */
+namespace net_err
+{
+    enum err_code
+    {
+        
+    };
+}
 
+namespace db_err
+{
+    enum err_code
+    {
+
+    };
+}
+
+namespace json_err
+{
+    enum err_code
+    {
+
+    };
+}
+
+namespace crypto_err
+{
+    enum err_code
+    {
+        CRYPTO_ERR = 3000,
+        UNKNOWN = 3001,
+        RAND_BYTES = 3002,
+        PKCS5_PBKDF2_HMAC = 3003,
+        JWT_VERIfY = 3004,
+
+    };
+}
+
+namespace business_err
+{
+    enum err_code
+    {
+
+    };
+}
 
 
 #define THROW_EXC(ExceptionType,errcode,errMsg) \
@@ -67,7 +110,7 @@ public:
     using BaseException::BaseException;
 };
 
-class SaltException : public BaseException
+class CryptoException : public BaseException
 {
 public:
     using BaseException::BaseException;

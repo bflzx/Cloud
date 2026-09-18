@@ -13,8 +13,6 @@
 #include "SingletonBase.hpp"
 
 
-
-
 //normal
 #define LOG(lv, msg) \
     do{\
