@@ -4,6 +4,7 @@
 #include <string>
 #include <mysql/mysql.h>
 #include "Log.hpp"
+#include "Exception.hpp"
 
 class Mysql
 {
@@ -11,7 +12,17 @@ public:
     bool exec(const std::string& sql)
     {
         if(!mysql_) return false;
-        return mysql_query(mysql_,sql.c_str()) == 0;
+        
+        int ret = mysql_query(mysql_,sql.c_str());
+
+        if(ret)
+        {
+            unsigned int eno = mysql_errno(mysql_);
+            const char* err_txt = mysql_error(mysql_);
+            THROW_EXC(DBException,db_err::MYSQL_QUERY,
+                        std::string("mysql_query error(") + std::to_string(eno) + ") : " + err_txt + " SQL: " + sql);
+        }
+        return true;
     }
     bool ping()
     {
@@ -24,7 +35,18 @@ public:
     std::vector<std::vector<std::string>> get_result()
     {
         MYSQL_RES* res = mysql_store_result(mysql_);
-        if(!res) return {};
+        if(res == nullptr)
+        {
+            unsigned int eno = mysql_errno(mysql_);
+            const char* err_txt = mysql_error(mysql_);
+            if(eno)
+            {
+                THROW_EXC(DBException,db_err::MYSQL_STORE_RESULT,
+                    std::string("mysql_store_result error(") + std::to_string(eno) + ") : " + err_txt);
+            }
+            return {};
+        }
+
         int cols = mysql_num_fields(res);
         size_t rows = mysql_num_rows(res) + 1;
         std::vector<std::vector<std::string>> result(rows,std::vector<std::string>(cols));
@@ -60,7 +82,7 @@ public:
     {
         if(!connect())
         {
-            mysql_ = nullptr;
+            THROW_EXC(DBException,db_err::MYSQL_CONSTRUCTOR,"Mysql Constructor faield!");
         }
     }
 

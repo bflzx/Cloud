@@ -7,6 +7,7 @@
 #include <memory>
 #include <atomic>
 #include "Mysql.hpp"
+#include "MysqlConnGuard.hpp"
 #include "Log.hpp"
 #include "SingletonBase.hpp"
 
@@ -17,26 +18,48 @@ class MysqlPool : public SingletonBase<MysqlPool>
     static const int default_capacity = 4;
 
 public:
-    std::unique_ptr<Mysql> borrow()
+    MysqlConnGuard borrow()
     {
         std::unique_lock<std::mutex> lock(mutex_);
         while(!stopped_ && pool_.empty())
         {
             cv_.wait(lock);
         }
-        if(stopped_ && pool_.empty()) return nullptr;
+        if(stopped_ && pool_.empty()) return MysqlConnGuard{nullptr,nullptr};
         std::unique_ptr<Mysql> conn = std::move(pool_.front());
         pool_.pop();
         lock.unlock();
 
-        if(conn->ping() || conn->reconnect()) return conn;
+        if(!conn->ping())
+        {
+            if(conn->reconnect())
+            {
+                return MysqlConnGuard(std::move(conn),this);
+            }
+            else
+            {
+                auto conn = std::move(create_conn());
+                if(conn->ping()) return MysqlConnGuard(std::move(conn),this);
+                
+            }
+        }
+
+        return 
+    }
+
+    std::unique_ptr<Mysql> create_conn()
+    {
+        std::unique_ptr<Mysql> conn = std::make_unique<Mysql>(host_,username_,password_,port_,database_);
+        std::unique_lock<std::mutex> lock(mutex_);
+        if(conn->ping()) return std::move(conn);
+
         return nullptr;
     }
 
     void give_back(std::unique_ptr<Mysql> conn)
     {
         std::unique_lock<std::mutex> lock(mutex_);
-        
+
         pool_.push(std::move(conn));
         cv_.notify_one();
     }

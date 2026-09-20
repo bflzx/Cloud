@@ -23,7 +23,11 @@ namespace db_err
 {
     enum err_code
     {
-
+        DB_ERR = 1000,
+        UNKNOWN = 1001,
+        MYSQL_CONSTRUCTOR = 1002,
+        MYSQL_QUERY = 1003,
+        MYSQL_STORE_RESULT = 1004,
     };
 }
 
@@ -44,7 +48,6 @@ namespace crypto_err
         RAND_BYTES = 3002,
         PKCS5_PBKDF2_HMAC = 3003,
         JWT_VERIfY = 3004,
-
     };
 }
 

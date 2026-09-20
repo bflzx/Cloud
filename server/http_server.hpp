@@ -106,7 +106,6 @@ private:
                     {
                         THROW_EXC(BusinessException,4001,"Password wrong!");
                     }
-                    MysqlPool::getInstance().give_back(std::move(conn));
                 }
             }
             else if(target == "/api/register")
@@ -126,7 +125,6 @@ private:
                     std::string sql = "INSERT INTO `user` (username, password, salt) "
                     "VALUES ('" + username + "','" + hash_password + "','" + salt + "')";
                     bool ret = conn->exec(sql);
-                    MysqlPool::getInstance().give_back(std::move(conn));
                     if(ret)
                     {
                         resp["code"] = 0;
