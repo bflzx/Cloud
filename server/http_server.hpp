@@ -70,21 +70,20 @@ private:
                     std::string password = user["password"].asString();
 
                     
-                    //TODO broow失败抛异常
                     auto conn = MysqlPool::getInstance().borrow();
 
                     std::string sql = "SELECT id,username,password,salt FROM user \
                     WHERE username = '" + username + "'";
-
-                    auto res = conn->get_result();
-                    if(res.size() <= 1)
+                    conn->exec(sql);
+                    auto query_res = conn->get_result();
+                    if(query_res.size() <= 1)
                     {
                         THROW_EXC(BusinessException,4000,"User not found!");
                     }
-                    int id = std::stoi(res[1][0]);
-                    std::string real_username = res[1][1];
-                    std::string real_password = res[1][2];
-                    std::string salt = res[1][3];
+                    int id = std::stoi(query_res[1][0]);
+                    std::string real_username = query_res[1][1];
+                    std::string real_password = query_res[1][2];
+                    std::string salt = query_res[1][3];
                     
                     password = crypto::pbkdf2_hash(password,salt);
                     if(password == real_password)
@@ -97,7 +96,7 @@ private:
                         std::string token = crypto::jwt_issue(uid,issuer,secret,expire_sec);
 
                         resp["code"] = 0;
-                        resp["msg"] = "login success";
+                        resp["message"] = "login success";
                         resp["data"]["token"] = token;
                         resp["data"]["uid"] = uid;
                         body = json::serialize(resp);
@@ -198,7 +197,7 @@ private:
             }
             
             // [2026-09-16 23:10:22] [127.0.0.1] [51324] [POST] [/api/login] [Mozilla/5.0 (Windows NT 10.0; Win64; x64)]
-            tcp::endpoint client_ep = stream.socket().local_endpoint();
+            tcp::endpoint client_ep = stream.socket().remote_endpoint();
 
             std::string client_ip = client_ep.address().to_string();
             uint16_t client_port = client_ep.port();

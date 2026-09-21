@@ -3,5 +3,5 @@
 </script>
 
 <template>
-    {{ 登录成功 }}
+    {{ '登录成功!' }}
 </template>

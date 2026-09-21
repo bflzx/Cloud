@@ -7,10 +7,38 @@
 #include <memory>
 #include <atomic>
 #include "Mysql.hpp"
-#include "MysqlConnGuard.hpp"
 #include "Log.hpp"
 #include "SingletonBase.hpp"
 
+class MysqlPool;
+
+class MysqlConnGuard
+{
+public:
+    MysqlConnGuard(std::unique_ptr<Mysql> conn,MysqlPool* pool)
+        :conn_(std::move(conn)),pool_(pool)
+    {}
+
+    MysqlConnGuard(const MysqlConnGuard&) = delete;
+    MysqlConnGuard& operator=(const MysqlConnGuard&) = delete;
+
+    MysqlConnGuard(MysqlConnGuard&& other) noexcept;
+    MysqlConnGuard& operator=(MysqlConnGuard&& other);
+    ~MysqlConnGuard();
+
+    Mysql* get()
+    {
+        return conn_.get();
+    }
+
+    Mysql* operator->()
+    {
+        return conn_.get();
+    }
+private:
+    std::unique_ptr<Mysql> conn_;
+    MysqlPool* pool_;
+};
 
 class MysqlPool : public SingletonBase<MysqlPool>
 {
@@ -44,7 +72,7 @@ public:
             }
         }
 
-        return 
+        return MysqlConnGuard(std::move(conn),this);
     }
 
     std::unique_ptr<Mysql> create_conn()
@@ -140,3 +168,32 @@ private:
     std::atomic<bool> stopped_ = false;
     std::atomic<bool> started_ = false;
 };
+
+inline MysqlConnGuard::MysqlConnGuard(MysqlConnGuard&& other) noexcept
+    :conn_(std::move(other.conn_)),pool_(other.pool_)
+    {
+        other.pool_ = nullptr;
+    }
+
+inline MysqlConnGuard& MysqlConnGuard::operator=(MysqlConnGuard&& other)
+    {
+        if(this != &other)
+        {
+            if(conn_ && pool_)
+            {
+                pool_->give_back(std::move(conn_));
+            }
+            conn_ = std::move(other.conn_);
+            pool_ = other.pool_;
+            other.pool_ = nullptr;
+        }
+        return *this;
+    }
+    
+inline MysqlConnGuard::~MysqlConnGuard()
+    {
+        if(conn_ && pool_)
+        {
+            pool_->give_back(std::move(conn_));
+        }
+    }

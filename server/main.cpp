@@ -17,6 +17,8 @@ int main()
         boost::asio::io_context ioc;
 
         Logger::getInstance().init("./log/log.txt");
+        Logger::getInstance().openAccessLog("./log/access.log");
+
         MysqlPool::getInstance().start(host,username,password,port,database);
 
 
