@@ -1,5 +1,6 @@
 #include <iostream>
 #include <fstream>
+#include <optinonal>
 #include <boost/asio.hpp>
 #include <boost/asio/awaitable.hpp>
 #include <boost/asio/use_awaitable.hpp>
@@ -46,6 +47,15 @@ private:
         if(path.ends_with(".json")) return "application/json";
         return "text/html;charset=utf-8";
     }
+    std::optional<std::string> get_header(const http::request<http::string_body>& req,http::field field)
+    {
+        auto iter = req.find(field);
+        if(iter != req.end())
+        {
+            return std::string(iter->value());
+        }
+        return std::nullopt;
+    }
     awaitable<void> router_handle(http::request<http::string_body>& req,http::response<http::string_body>& res)
     {
         res.result(http::status::ok);
@@ -55,7 +65,26 @@ private:
         std::string mime = get_mime(target);
         Json::Value resp;
         try{
-            if(target.starts_with("/assets/") || target == "/favicon.svg" || target == "/icons.svg")
+            //TODO 鉴权
+            bool is_white_list = 
+                                target.starts_with("/assets/") 
+                                || target == "/favicon.svg" 
+                                || target == "/icons.svg"
+                                || target == "/api/login"
+                                || target == "/api/register"
+                                || target == "/";
+            std::string access_token;
+            if(!is_white_list)
+            {
+                auto auth_opt = get_header(req,http::field::authorization);
+                if(!auth_opt.has_value())
+                {
+                    resp["code"] = business_err::BUSINESS_ERR;
+                    resp["message"] = "token 不存在,请重新登录";
+                    body = json::serialize(resp);
+                }
+            }
+            else if(target.starts_with("/assets/") || target == "/favicon.svg" || target == "/icons.svg")
             {
                 body = read_file("../web/dist" + target);
             }

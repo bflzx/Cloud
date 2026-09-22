@@ -55,7 +55,8 @@ namespace business_err
 {
     enum err_code
     {
-
+        BUSINESS_ERR = 4000,
+        
     };
 }
 
