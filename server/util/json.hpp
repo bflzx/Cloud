@@ -8,7 +8,7 @@
 
 namespace json
 {
-    std::string serialize(const Json::Value& root)
+    inline std::string serialize(const Json::Value& root)
     {
         Json::StreamWriterBuilder swb;
         std::unique_ptr<Json::StreamWriter> sw(swb.newStreamWriter());
@@ -24,7 +24,7 @@ namespace json
         return ss.str();
     }
 
-    Json::Value unserialize(const std::string& str)
+    inline Json::Value unserialize(const std::string& str)
     {
         Json::CharReaderBuilder crb;
         std::unique_ptr<Json::CharReader> cr(crb.newCharReader());
@@ -38,4 +38,6 @@ namespace json
         }
         return root;
     }
+
+    
 }

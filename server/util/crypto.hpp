@@ -11,7 +11,7 @@
 #include "Exception.hpp"
 
 namespace crypto{
-    std::string getSalt()
+    inline std::string getSalt()
     {
         const int salt_byte_len = 32;
         unsigned char raw_salt[salt_byte_len] = {0};
@@ -33,7 +33,7 @@ namespace crypto{
         return oss.str();
     }
 
-    static std::vector<unsigned char> hex_to_bin(const std::string& hex)
+    inline static std::vector<unsigned char> hex_to_bin(const std::string& hex)
     {
         std::vector<unsigned char> bin;
         for (size_t i = 0; i + 1 < hex.size(); i += 2)
@@ -45,7 +45,7 @@ namespace crypto{
         return bin;
     }
 
-    std::string pbkdf2_hash(const std::string& raw_pwd, const std::string& hex_salt, int iter = 100000)
+    inline std::string pbkdf2_hash(const std::string& raw_pwd, const std::string& hex_salt, int iter = 100000)
     {
         std::vector<unsigned char> salt_bin = hex_to_bin(hex_salt);
         const int hash_byte_len = 32;
@@ -77,7 +77,7 @@ namespace crypto{
         return oss.str();
     }
 
-    std::string jwt_issue(const std::string& sub, const std::string& issuer, const std::string& secret, long expire_sec)
+    inline std::string jwt_issue(const std::string& sub, const std::string& issuer, const std::string& secret, long expire_sec)
     {
         auto now = std::chrono::system_clock::now();
 
@@ -89,7 +89,7 @@ namespace crypto{
             .sign(jwt::algorithm::hs256{secret});
     }
 
-    bool jwt_verify(const std::string& token, const std::string& issuer, const std::string& secret)
+    inline bool jwt_verify(const std::string& token, const std::string& issuer, const std::string& secret)
     {
         try
         {
@@ -113,7 +113,7 @@ namespace crypto{
         return false;
     }
 
-    std::string jwt_get_sub(const std::string& token)
+    inline std::string jwt_get_sub(const std::string& token)
     {
         auto decoded = jwt::decode(token);
         return decoded.get_subject();
