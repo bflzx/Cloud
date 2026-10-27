@@ -7,6 +7,7 @@
 #include <boost/asio/co_spawn.hpp>
 #include <boost/beast.hpp>
 #include "util.hpp"
+#include "http/Response.hpp"
 namespace beast = boost::beast;
 namespace http = beast::http;
 namespace asio = boost::asio;
@@ -62,7 +63,7 @@ private:
         std::string target = req.target();
         std::string body;
         std::string mime = get_mime(target);
-        Json::Value resp;
+        Json::Value response;
         try{
             //TODO 鉴权
             bool is_white_list = 
@@ -78,9 +79,10 @@ private:
                 auto auth_opt = get_header(req,http::field::authorization);
                 if(!auth_opt.has_value())
                 {
-                    resp["code"] = business_err::BUSINESS_ERR;
-                    resp["message"] = "token 不存在,请重新登录";
-                    body = json::serialize(resp);
+                    body = json::serialize(resp::fail(business_err::TOKEN_INVALID,"token 不存在,请重新登录"));
+                    // resp["code"] = business_err::BUSINESS_ERR;
+                    // resp["message"] = "token 不存在,请重新登录";
+                    // body = json::serialize(resp);
                 }
             }
             else if(target.starts_with("/assets/") || target == "/favicon.svg" || target == "/icons.svg")
@@ -123,11 +125,10 @@ private:
 
                         std::string token = crypto::jwt_issue(uid,issuer,secret,expire_sec);
 
-                        resp["code"] = 0;
-                        resp["message"] = "login success";
-                        resp["data"]["token"] = token;
-                        resp["data"]["uid"] = uid;
-                        body = json::serialize(resp);
+                        Json::Value data;
+                        data["token"] = token;
+                        data["uid"]   = uid;
+                        body = json::serialize(resp::ok("login success", data));
                     }
                     else
                     {
@@ -154,24 +155,27 @@ private:
                     bool ret = conn->exec(sql);
                     if(ret)
                     {
-                        resp["code"] = 0;
-                        resp["data"] = Json::Value();
-                        resp["message"] = "注册成功";
+                        response = resp::ok("注册成功");
+                        // resp["code"] = 0;
+                        // resp["data"] = Json::Value();
+                        // resp["message"] = "注册成功";
                     }
                     else
                     {
-                        resp["code"] = 1000;
-                        resp["data"] = Json::Value();
-                        resp["message"] = "注册失败";
+                        response = resp::fail(business_err::INTERNAL_ERR,"注册失败");
+                        // resp["code"] = 1000;
+                        // resp["data"] = Json::Value();
+                        // resp["message"] = "注册失败";
                     }
                 }
                 else
                 {
-                    resp["code"] = 1000;
-                    resp["data"] = Json::Value();
-                    resp["message"] = "注册失败";
+                    response = resp::fail(business_err::PARAM_ERR,"注册失败");
+                    // resp["code"] = 1000;
+                    // resp["data"] = Json::Value();
+                    // resp["message"] = "注册失败";
                 }
-                body = json::serialize(resp);
+                body = json::serialize(response);
             }
             else
             {
@@ -182,26 +186,34 @@ private:
         catch(const CryptoException& e)
         {
             LOG_WARN_EXC(e);
-            resp["code"] = crypto_err::CRYPTO_ERR;
-            resp["data"] = Json::Value();
-            resp["message"] = "注册失败";
-            body = json::serialize(resp);
+            body = json::serialize(resp::fail(business_err::INTERNAL_ERR,"注册失败"));
+            // resp["code"] = crypto_err::CRYPTO_ERR;
+            // resp["data"] = Json::Value();
+            // resp["message"] = "注册失败";
+            // body = json::serialize(resp);
+        }
+        catch(const BusinessException& e)
+        {
+            LOG_WARN_EXC(e);
+            body = json::serialize(resp::fail(e.getCode(), e.what()));
         }
         catch(const BaseException& e)
         {
             LOG_ERROR_EXC(e);
-            resp["code"] = 5000;
-            resp["data"] = Json::Value();
-            resp["message"] = "服务器内部错误";
-            body = json::serialize(resp);
+            body = json::serialize(resp::fail(business_err::INTERNAL_ERR,"服务器内部错误"));
+            // resp["code"] = 5000;
+            // resp["data"] = Json::Value();
+            // resp["message"] = "服务器内部错误";
+            // body = json::serialize(resp);
         }
         catch(...)
         {
             LOG_ERROR("unknown uncaught exception");
-            resp["code"] = 500;
-            resp["data"] = Json::Value();
-            resp["message"] = "未知服务异常";
-            body = json::serialize(resp);
+            body = json::serialize(resp::fail(business_err::INTERNAL_ERR,"未知服务异常"));
+            // resp["code"] = 500;
+            // resp["data"] = Json::Value();
+            // resp["message"] = "未知服务异常";
+            // body = json::serialize(resp);
         }
         res.set(http::field::content_type,mime);
         res.body() = std::move(body);

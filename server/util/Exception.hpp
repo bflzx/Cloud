@@ -55,8 +55,13 @@ namespace business_err
 {
     enum err_code
     {
-        BUSINESS_ERR = 4000,
-        
+        OK             = 0,      // 成功
+        PARAM_ERR      = 4001,   // 参数缺失 / 格式错
+        LOGIN_FAILED   = 4002,   // 登录失败(故意合并"用户不存在/密码错误")
+        USERNAME_TAKEN = 4004,   // 用户名已存在(注册要区分)
+        TOKEN_INVALID  = 4005,   // 未登录 / token 无效或过期
+        NOT_FOUND      = 4006,   // 资源不存在
+        INTERNAL_ERR   = 5000,   // 服务端内部错误(兜底)
     };
 }
 
